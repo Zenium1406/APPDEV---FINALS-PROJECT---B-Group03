@@ -22,36 +22,46 @@ let editingReminderId = null;
 
 // Wait for DOM to be fully loaded
 document.addEventListener('DOMContentLoaded', function() {
-    // Get DOM elements
-    const noteForm = document.getElementById('noteForm');
-    const reminderForm = document.getElementById('reminderForm');
-    const notesList = document.getElementById('notesList');
-    const remindersList = document.getElementById('remindersList');
-    const notificationToggle = document.getElementById('notificationToggle');
-    const clearNotificationsBtn = document.getElementById('clearNotifications');
+    console.log("DOM loaded, initializing app...");
     
     // Initialize the app
     initApp();
     
     // Initialize event listeners
+    setupEventListeners();
+});
+
+// Initialize event listeners
+function setupEventListeners() {
+    const noteForm = document.getElementById('noteForm');
+    const reminderForm = document.getElementById('reminderForm');
+    const notificationToggle = document.getElementById('notificationToggle');
+    const clearNotificationsBtn = document.getElementById('clearNotifications');
+    
+    // Note form submission
     if (noteForm) {
         noteForm.addEventListener('submit', function(e) {
             e.preventDefault();
+            console.log("Note form submitted");
             handleNoteSubmit();
         });
     }
     
+    // Reminder form submission
     if (reminderForm) {
         reminderForm.addEventListener('submit', function(e) {
             e.preventDefault();
+            console.log("Reminder form submitted");
             handleReminderSubmit();
         });
     }
     
+    // Notification toggle
     if (notificationToggle) {
         notificationToggle.addEventListener('click', toggleNotificationPanel);
     }
     
+    // Clear notifications
     if (clearNotificationsBtn) {
         clearNotificationsBtn.addEventListener('click', clearAllNotifications);
     }
@@ -59,21 +69,19 @@ document.addEventListener('DOMContentLoaded', function() {
     // Category filter event listeners
     document.querySelectorAll('.category-filter').forEach(filter => {
         filter.addEventListener('click', function() {
-            setActiveFilter(this.dataset.category);
             document.querySelectorAll('.category-filter').forEach(f => f.classList.remove('active'));
             this.classList.add('active');
+            currentFilter = this.dataset.category;
+            console.log("Filter changed to:", currentFilter);
             renderNotes();
             renderReminders();
         });
     });
-});
+}
 
 // Initialize the app
 function initApp() {
-    renderNotes();
-    renderReminders();
-    updateNotificationCount();
-    renderNotifications();
+    console.log("Initializing app...");
     
     // Set default datetime for reminder to next hour
     const now = new Date();
@@ -86,8 +94,16 @@ function initApp() {
     
     // Request notification permission
     if ("Notification" in window && Notification.permission === "default") {
-        Notification.requestPermission();
+        Notification.requestPermission().then(permission => {
+            console.log("Notification permission:", permission);
+        });
     }
+    
+    // Initial render
+    renderNotes();
+    renderReminders();
+    renderNotifications();
+    updateNotificationCount();
 }
 
 // Handle note form submission
@@ -95,6 +111,13 @@ function handleNoteSubmit() {
     const title = document.getElementById('noteTitle').value;
     const content = document.getElementById('noteContent').value;
     const category = document.getElementById('noteCategory').value;
+    
+    if (!title || !content) {
+        alert("Please fill in all fields");
+        return;
+    }
+    
+    console.log("Adding note:", title);
     
     if (editingNoteId) {
         // Update existing note
@@ -109,6 +132,7 @@ function handleNoteSubmit() {
         }
         editingNoteId = null;
         document.querySelector('#noteForm button[type="submit"]').innerHTML = '<i class="fas fa-save"></i> Save Note';
+        addNotification(`Note updated: ${title}`);
     } else {
         // Add new note
         const newNote = {
@@ -135,6 +159,13 @@ function handleReminderSubmit() {
     const date = document.getElementById('reminderDate').value;
     const category = document.getElementById('reminderCategory').value;
     
+    if (!title || !date) {
+        alert("Please fill in all fields");
+        return;
+    }
+    
+    console.log("Adding reminder:", title);
+    
     if (editingReminderId) {
         // Update existing reminder
         const reminderIndex = reminders.findIndex(reminder => reminder.id === editingReminderId);
@@ -148,6 +179,7 @@ function handleReminderSubmit() {
         }
         editingReminderId = null;
         document.querySelector('#reminderForm button[type="submit"]').innerHTML = '<i class="fas fa-bell"></i> Set Reminder';
+        addNotification(`Reminder updated: ${title}`);
     } else {
         // Add new reminder
         const newReminder = {
@@ -174,11 +206,6 @@ function handleReminderSubmit() {
     updateNotificationCount();
     renderNotifications();
     checkUpcomingReminders();
-}
-
-// Set active filter
-function setActiveFilter(category) {
-    currentFilter = category;
 }
 
 // Toggle notification panel
@@ -212,14 +239,27 @@ function renderNotes() {
         filteredNotes = notes.filter(note => note.category === currentFilter);
     }
     
+    console.log("Rendering notes, count:", filteredNotes.length);
+    
     if (!filteredNotes.length) {
-        emptyNotes.classList.remove('hidden');
+        // Show empty state
+        if (emptyNotes) {
+            emptyNotes.classList.remove('hidden');
+        }
         notesList.innerHTML = '';
-        notesList.appendChild(emptyNotes);
+        // Re-add empty state if it was removed
+        if (!emptyNotes.parentNode) {
+            notesList.appendChild(emptyNotes);
+        }
         return;
     }
     
-    emptyNotes.classList.add('hidden');
+    // Hide empty state
+    if (emptyNotes) {
+        emptyNotes.classList.add('hidden');
+    }
+    
+    // Clear and rebuild notes list
     notesList.innerHTML = '';
     
     filteredNotes.forEach(note => {
@@ -276,14 +316,27 @@ function renderReminders() {
         filteredReminders = reminders.filter(reminder => reminder.category === currentFilter);
     }
     
+    console.log("Rendering reminders, count:", filteredReminders.length);
+    
     if (!filteredReminders.length) {
-        emptyReminders.classList.remove('hidden');
+        // Show empty state
+        if (emptyReminders) {
+            emptyReminders.classList.remove('hidden');
+        }
         remindersList.innerHTML = '';
-        remindersList.appendChild(emptyReminders);
+        // Re-add empty state if it was removed
+        if (!emptyReminders.parentNode) {
+            remindersList.appendChild(emptyReminders);
+        }
         return;
     }
     
-    emptyReminders.classList.add('hidden');
+    // Hide empty state
+    if (emptyReminders) {
+        emptyReminders.classList.add('hidden');
+    }
+    
+    // Clear and rebuild reminders list
     remindersList.innerHTML = '';
     
     filteredReminders.forEach(reminder => {
